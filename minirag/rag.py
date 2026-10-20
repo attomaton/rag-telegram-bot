@@ -20,7 +20,7 @@ SYSTEM_PROMPT = """Ты — консультант интернет-магази
 Правила:
 - Не придумывай товары, цены и характеристики, которых нет в каталоге.
 - Если подходящего товара нет, честно скажи об этом и предложи ближайшую альтернативу из каталога, если она есть.
-- Называй товар точным названием и ценой в рублях; если товара нет в наличии — предупреди.
+- Называй товар точным названием и ценой в гривнах; если товара нет в наличии — предупреди.
 - Пиши коротко и по делу, на русском, простым текстом без Markdown: ответ уйдёт в Telegram как обычный текст."""
 
 NOTHING_FOUND = (
@@ -28,7 +28,7 @@ NOTHING_FOUND = (
     "Попробуйте описать товар иначе: для чего он нужен, бюджет, важные характеристики."
 )
 
-_NUM = r"(\d[\d\s]*(?:[.,]\d+)?)\s*(к|k|тыс\w*\.?|т\.?р\.?|₽|р\.?|руб\w*\.?)?"
+_NUM = r"(\d[\d\s]*(?:[.,]\d+)?)\s*(к|k|тыс\w*\.?|тис\w*\.?|₴|грн\.?|грив\w*)?"
 _MAX_RE = re.compile(rf"(?:до|дешевле|не\s+дороже|меньше|максимум|бюджет)\s*{_NUM}", re.I)
 _MIN_RE = re.compile(rf"(?:от|дороже|больше|не\s+дешевле)\s*{_NUM}", re.I)
 _IN_STOCK_RE = re.compile(r"в\s+наличии|есть\s+в\s+продаже|можно\s+купить\s+сейчас", re.I)
@@ -37,7 +37,7 @@ _IN_STOCK_RE = re.compile(r"в\s+наличии|есть\s+в\s+продаже|�
 def _parse_amount(number: str, suffix: str | None) -> int | None:
     value = float(number.replace(" ", "").replace(",", "."))
     suffix = (suffix or "").lower()
-    if suffix.startswith(("к", "k", "тыс", "т")):
+    if suffix.startswith(("к", "k", "тыс", "тис")):
         value *= 1000
     # "до 14 часов" — не цена: без валюты/множителя считаем ценой только суммы от 500.
     if not suffix and value < 500:
@@ -66,7 +66,7 @@ class Answer:
 def format_hit(hit: SearchHit) -> str:
     m = hit.metadata
     stock = "в наличии" if m["in_stock"] else "нет в наличии"
-    return f"{m['name']} — {m['price']:,} ₽ ({stock})".replace(",", " ")
+    return f"{m['name']} — {m['price']:,} ₴ ({stock})".replace(",", " ")
 
 
 def format_scores(hit: SearchHit) -> str:
@@ -130,7 +130,7 @@ class RAG:
 
     async def _generate(self, question: str, hits: list[SearchHit]) -> str:
         context = "\n".join(
-            f'<product id="{h.id}" price_rub="{h.metadata["price"]}" '
+            f'<product id="{h.id}" price_uah="{h.metadata["price"]}" '
             f'in_stock="{str(h.metadata["in_stock"]).lower()}">{h.document}</product>'
             for h in hits
         )
